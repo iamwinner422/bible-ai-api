@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     for i in range(0, len(texts), BATCH_SIZE):
         batch = texts[i:i + BATCH_SIZE]
-        parts.append(np.array(list(model.embed(batch, batch_size=64)), dtype="float32"))
+        parts.append(model.embed(batch))
 
         done = min(i + BATCH_SIZE, len(texts))
         elapsed = time.time() - startTime

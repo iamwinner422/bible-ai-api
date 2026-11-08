@@ -1,5 +1,5 @@
-fastapi
-uvicorn
-fastembed
-numpy
- 
+fastapi==0.162.2
+numpy==2.5.4
+onnxruntime==1.31.1
+tokenizers==0.23.3
+uvicorn==0.54.0
