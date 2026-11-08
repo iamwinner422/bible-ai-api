@@ -1,10 +1,9 @@
 import json
 import numpy as np
-from fastembed import TextEmbedding
+from search_engine import MODEL, load_model
 import time
 
 BIBLE_FILE = "data/bible_fr.json"
-MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 WINDOW = 1  # one verse per search result
 STEP = 1    # Reading one verse at a time
 BATCH_SIZE = 500
@@ -65,9 +64,8 @@ if __name__ == "__main__":
     passages = build_passages(BIBLE_FILE)
     print(f"{len(passages)} passages to convert into vectors...")
 
-    # cache_dir="models": the model is downloaded to the project directory
-    print("Loading model...")
-    model = TextEmbedding(MODEL, cache_dir="models")
+    print(f"Loading {MODEL}...")
+    model = load_model()
     texts = [p["text"] for p in passages]
 
     parts = []
@@ -75,7 +73,7 @@ if __name__ == "__main__":
 
     for i in range(0, len(texts), BATCH_SIZE):
         batch = texts[i:i + BATCH_SIZE]
-        parts.append(np.array(list(model.embed(batch, batch_size=64)), dtype="float32"))
+        parts.append(model.embed(batch))
 
         done = min(i + BATCH_SIZE, len(texts))
         elapsed = time.time() - startTime
