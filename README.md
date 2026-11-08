@@ -87,7 +87,7 @@ The response is an array of results. For example:
 ]
 ```
 
-Each result contains one verse. Semantic and BM25 keyword rankings are combined using Reciprocal Rank Fusion; overlapping verses are omitted. The `score` is the semantic similarity score, not the combined ranking score. `mots_cles` is `true` when at least one normalized query term appears in that verse.
+Each result contains one verse. Normalized semantic and BM25 keyword scores are combined for ranking. When a meaningful phrase at the end of the query appears verbatim in a verse, matching verses are ranked first and the other results follow. To get only verses containing the exact phrase, wrap the query in double quotes (for example `query="Judas Iscariot"`); if no verse contains it, the response is an empty array. The `score` field remains the semantic similarity, not the combined ranking score. `mots_cles` is `true` when at least one normalized query term appears in that verse.
 
 The API loads the generated index at startup. If you rebuild the index while the API is running, restart the API to load the new files.
 
