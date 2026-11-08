@@ -68,10 +68,29 @@ Example response:
 
 ### Search
 
-Pass a question or keywords in the required `query` parameter. `responseSize` is optional, defaults to `8`, and is clamped to a range of `1` to `20`.
+Pass a question or keywords in French in the required `query` parameter. `responseSize` is optional, defaults to `8`, and is clamped to a range of `1` to `20`.
+
+| Parameter | Required | Default | Description |
+|---|---|---|---|
+| `query` | Yes | | Question, keywords or phrase. Wrap it in double quotes for an exact phrase search. |
+| `responseSize` | No | `8` | Number of verses to return, from `1` to `20` |
+
+Natural-language question:
 
 ```cmd
-curl "http://127.0.0.1:8000/search?query=love%20and%20forgiveness&responseSize=5"
+curl "http://127.0.0.1:8000/search?query=quel%20est%20le%20plus%20grand%20commandement&responseSize=5"
+```
+
+Keywords:
+
+```cmd
+curl "http://127.0.0.1:8000/search?query=Judas%20Iscariot"
+```
+
+Exact phrase only (the query is wrapped in `%22`, the URL-encoded double quote):
+
+```cmd
+curl "http://127.0.0.1:8000/search?query=%22ton%20peuple%20sera%20mon%20peuple%22"
 ```
 
 The response is an array of results. For example:
@@ -87,18 +106,56 @@ The response is an array of results. For example:
 ]
 ```
 
-Each result contains one verse. Normalized semantic and BM25 keyword scores are combined for ranking. When a meaningful phrase at the end of the query appears verbatim in a verse, matching verses are ranked first and the other results follow. To get only verses containing the exact phrase, wrap the query in double quotes (for example `query="Judas Iscariot"`); if no verse contains it, the response is an empty array. The `score` field remains the semantic similarity, not the combined ranking score. `mots_cles` is `true` when at least one normalized query term appears in that verse.
+| Field | Description |
+|---|---|
+| `reference` | Book, chapter and verse in the LSG translation |
+| `text` | Verse text |
+| `score` | Semantic similarity between the query and the verse (not the final ranking score) |
+| `mots_cles` | `true` when at least one query word appears in the verse |
+
+### How results are ranked
+
+Each result is one verse, and overlapping verses are returned only once.
+
+1. **Semantic search**: the query and every verse are converted to vectors with the `paraphrase-multilingual-MiniLM-L12-v2` model, and the closest verses are selected.
+2. **Keyword search**: BM25 selects verses containing the query words, giving more weight to rare words.
+3. **Fusion**: both scores are normalized to the same scale and combined, with semantic search weighted twice as much as keywords (`W_SEM` and `W_KW` in `main.py`).
+4. **Exact phrase**: when a meaningful phrase at the end of the query (at least two words that are not stop words) appears verbatim in a verse, that verse is ranked first; the other results still follow.
+
+With a query wrapped in double quotes, only verses containing the whole phrase verbatim are returned. If no verse contains it, the response is an empty array.
 
 The API loads the generated index at startup. If you rebuild the index while the API is running, restart the API to load the new files.
+
+## Evaluate search quality
+
+`eval/questions.json` contains 60 French questions with the references expected for each one. The evaluation script runs them through the search engine and measures how often a correct verse is returned:
+
+```cmd
+python eval/evaluate.py
+python eval/evaluate.py --details
+```
+
+`--details` shows the rank of the first correct verse for each question, or `MISS`. Current results:
+
+| Mode | Correct verse ranked 1st | In top 3 | In top 8 | MRR |
+|---|---|---|---|---|
+| Semantic only | 38% | 43% | 48% | 0.42 |
+| Hybrid (used by the API) | 47% | 55% | 73% | 0.54 |
+
+Run the evaluation after changing the search settings, to make sure the change actually improves the results. To test more cases, add questions to `eval/questions.json`; book names must match those of the index (for example `Actes des Apôtres 2:1-4`, or `Daniel 6` for a whole chapter).
 
 ## Project structure
 
 ```text
 .
 ├── build_index.py       # Loads Bible data and generates one-verse embeddings
-├── bm25.py              # BM25 keyword scoring and rank fusion
-├── main.py              # FastAPI endpoints and hybrid search
+├── bm25.py              # BM25 keyword scoring, exact phrase matching and score fusion
+├── search_engine.py     # Hybrid search shared by the API and the evaluation
+├── main.py              # FastAPI endpoints
 ├── requirements.txt     # Python dependencies
+├── eval/
+│   ├── questions.json   # Test questions and expected references
+│   └── evaluate.py      # Search quality measurement
 ├── data/
 │   ├── bible_fr.json    # Default source Bible text
 │   └── bible_fr_2.json  # Additional source data

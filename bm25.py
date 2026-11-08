@@ -82,7 +82,7 @@ class BM25:
         return s
 
 
-def fuse(sem_scores, kw_scores, w_sem=0.6, w_kw=1.0, min_sem=0.30, depth=60,
+def fuse(sem_scores, kw_scores, w_sem=2.0, w_kw=1.0, min_sem=0.30, depth=60,
          phrase_scores=None, exact_only=False):
     """
     Combine normalized semantic and keyword scores. Passages with a phrase
@@ -108,13 +108,17 @@ def fuse(sem_scores, kw_scores, w_sem=0.6, w_kw=1.0, min_sem=0.30, depth=60,
         if not candidates:
             return []
 
-    max_sem = max((max(float(sem_scores[idx]), 0.0) for idx in candidates), default=0.0)
-    max_kw = max((float(kw_scores[idx]) for idx in candidates), default=0.0)
+    # Min-max normalization over the candidates: each score is spread over [0, 1],
+    # so neither method dominates just because its raw scores are higher.
+    def normalizer(scores):
+        values = [float(scores[idx]) for idx in candidates]
+        low, high = min(values), max(values)
+        return lambda idx: (float(scores[idx]) - low) / (high - low) if high > low else 0.0
+
+    sem_norm, kw_norm = normalizer(sem_scores), normalizer(kw_scores)
 
     def rank_score(idx):
-        sem = max(float(sem_scores[idx]), 0.0) / max_sem if max_sem else 0.0
-        kw = float(kw_scores[idx]) / max_kw if max_kw else 0.0
-        return (w_sem * sem + w_kw * kw) / (w_sem + w_kw)
+        return (w_sem * sem_norm(idx) + w_kw * kw_norm(idx)) / (w_sem + w_kw)
 
     return sorted(
         candidates,
