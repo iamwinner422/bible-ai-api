@@ -76,6 +76,8 @@ Example response:
 }
 ```
 
+The server answers as soon as it starts, while the search index loads in the background (a few seconds locally, up to a minute or two on a small hosting instance). During that time, `/` returns `{"status": "loading"}` and `/search` returns HTTP `503` with a `Retry-After` header. If loading fails, both return `"status": "error"` with the cause in `detail`.
+
 ### Search
 
 Pass a question or keywords in French in the required `query` parameter. `responseSize` is optional, defaults to `8`, and is clamped to a range of `1` to `20`.
@@ -187,7 +189,9 @@ The free instance (512 MB of RAM, 0.1 vCPU) is enough for the API.
 | Health check | HTTP, path `/` |
 | Instance | Free |
 
-The API takes about 20 seconds to start. On the free tier, the service sleeps after a period without traffic, so the first request after that is slow.
+With 0.1 vCPU, the index takes up to a minute or two to load after each start. The health check passes right away, and `/` shows `"status": "ok"` once search is available. On the free tier, the service sleeps after a period without traffic, so the first request after that is slow.
+
+If the service does not respond, open the **Logs** tab of the service in Koyeb: the line `Search index ready` confirms that loading finished, and an `out of memory` or `Could not load the search index` message gives the cause.
 
 ## Project structure
 

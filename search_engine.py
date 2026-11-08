@@ -24,6 +24,12 @@ class Embedder:
         self.tokenizer.enable_padding(pad_id=self.tokenizer.token_to_id("<pad>"), pad_token="<pad>")
         options = ort.SessionOptions()
         options.enable_cpu_mem_arena = False  # lower memory use between requests
+        # model.onnx is saved already optimized by tools/prune_vocab.py, so skipping the
+        # optimization pass makes loading ~20x cheaper. One thread is the fastest choice
+        # on small hosting instances (0.1 vCPU).
+        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
+        options.intra_op_num_threads = 1
+        options.inter_op_num_threads = 1
         self.session = ort.InferenceSession(os.path.join(model_dir, "model.onnx"), options,
                                             providers=["CPUExecutionProvider"])
 
