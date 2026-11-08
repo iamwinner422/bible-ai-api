@@ -57,28 +57,30 @@ The response contains the status (`ok`) and the number of indexed passages.
 The `query` parameter contains the question or keywords. `responseSize` is optional, defaults to 8, and is limited to a range of 1 to 20.
 
 ```cmd
-curl "http://127.0.0.1:8000/search?query=love%20and%20forgiveness&maxResponsesSize=5"
+curl "http://127.0.0.1:8000/search?query=love%20and%20forgiveness&responseSize=5"
 ```
 
-Each result includes a Bible reference, the passage text, and a similarity score:
+Each result includes a Bible reference, the passage text, the semantic similarity score, and whether keyword matching contributed:
 
 ```json
 [
   {
-    "reference": "Jean 3:16-18",
-    "text": "...",
-    "score": 0.72
+    "reference": "Jean 3:16 (LSG)",
+    "text": "Car Dieu a tant aimé le monde...",
+    "score": 0.72,
+    "mots_cles": true
   }
 ]
 ```
 
-Passages below the similarity threshold are not returned. Overlapping results are also excluded to avoid duplicates.
+Each result contains one verse only. Results can match the query semantically or lexically; `mots_cles` indicates whether a query word also appears in the verse. To apply this change to an existing installation, rebuild the index with `python build_index.py` and restart the API.
 
 ## Project structure
 
 ```text
 .
 ├── build_index.py       # Prepares passages and generates their embeddings
+
 ├── main.py              # FastAPI search API
 ├── requirements.txt     # Python dependencies
 ├── data/

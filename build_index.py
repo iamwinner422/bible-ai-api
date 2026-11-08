@@ -5,7 +5,7 @@ import time
 
 BIBLE_FILE = "data/bible_fr.json"
 MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-WINDOW = 3  # verses per passage (short, since the model reads ~128 tokens max)
+WINDOW = 1  # one verse per search result
 STEP = 1    # Reading one verse at a time
 BATCH_SIZE = 500
 
