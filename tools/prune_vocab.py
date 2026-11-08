@@ -22,6 +22,7 @@ import unicodedata
 
 import numpy as np
 import onnx
+import onnxruntime as ort
 from huggingface_hub import snapshot_download
 from onnx import numpy_helper
 from tokenizers import Tokenizer
@@ -85,8 +86,16 @@ def main():
     else:
         raise RuntimeError(f"{EMBEDDINGS} not found in the model")
 
+    # Save the model already optimized by onnxruntime, so the API can skip this
+    # costly step at startup. EXTENDED (not ALL) keeps the file hardware-independent.
     os.makedirs(OUT_DIR, exist_ok=True)
-    onnx.save(model, os.path.join(OUT_DIR, "model.onnx"))
+    pruned_path = os.path.join("models", "pruned.onnx")
+    onnx.save(model, pruned_path)
+    options = ort.SessionOptions()
+    options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
+    options.optimized_model_filepath = os.path.join(OUT_DIR, "model.onnx")
+    ort.InferenceSession(pruned_path, options, providers=["CPUExecutionProvider"])
+    os.remove(pruned_path)
     with open(os.path.join(OUT_DIR, "tokenizer.json"), "w", encoding="utf-8") as f:
         json.dump(tok_json, f, ensure_ascii=False)
     shutil.copy(os.path.join(src, "config.json"), OUT_DIR)
