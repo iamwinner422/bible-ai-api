@@ -1,6 +1,6 @@
 import json
 import logging
-import threading
+import os
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -12,20 +12,20 @@ from search_engine import SearchEngine
 W_SEM = 2.0  # weight of semantic search in the fusion (tuned with eval/evaluate.py)
 W_KW = 1.0   # weight of keyword search in the fusion
 SEARCH_DEPTH = 60
+OUTPUTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")
 
 log = logging.getLogger("uvicorn.error")
 
-# Loading the index takes several seconds, and up to a minute or two on small
-# hosting instances. It runs in the background so the server answers right away
-# (health checks pass), and /search waits until the index is ready.
+# Vercel must not freeze a serverless instance while a background thread loads
+# the index. Load it before accepting the first request instead.
 state = {"engine": None, "meta": None, "error": None}
 
 
 def load_index():
     try:
         log.info("Loading the search index...")
-        emb = np.load("outputs/bible_emb.npy").astype("float32")
-        with open("outputs/bible_meta.json", encoding="utf-8") as file:
+        emb = np.load(os.path.join(OUTPUTS, "bible_emb.npy")).astype("float32")
+        with open(os.path.join(OUTPUTS, "bible_meta.json"), encoding="utf-8") as file:
             meta = json.load(file)
         state["engine"] = SearchEngine(emb, meta, w_sem=W_SEM, w_kw=W_KW, depth=SEARCH_DEPTH)
         state["meta"] = meta
@@ -37,7 +37,7 @@ def load_index():
 
 @asynccontextmanager
 async def lifespan(app):
-    threading.Thread(target=load_index, daemon=True).start()
+    load_index()
     yield
 
 
