@@ -50,6 +50,12 @@ def full_phrase_length(query, text):
     return len(query_tokens) if _contains(tokenize(text), query_tokens) else 0
 
 
+def term_coverage(query, text):
+    """Count distinct non-stopword query terms present in a passage."""
+    terms = set(tokenize(query)) - STOP_WORDS
+    return len(terms.intersection(tokenize(text)))
+
+
 class BM25:
     """
     BM25 gives higher scores to passages containing query terms, especially
@@ -83,10 +89,11 @@ class BM25:
 
 
 def fuse(sem_scores, kw_scores, w_sem=2.0, w_kw=1.0, min_sem=0.30, depth=60,
-         phrase_scores=None, exact_only=False):
+         phrase_scores=None, coverage_scores=None, exact_only=False):
     """
     Combine normalized semantic and keyword scores. Passages with a phrase
-    match (phrase_scores > 0) are ranked first; the others still follow.
+    match (phrase_scores > 0) are ranked first. Among the remaining passages,
+    matches for more distinct query terms rank first.
     With exact_only=True, only phrase-matching passages are kept.
     Returns passage indices from best to worst.
     """
@@ -103,6 +110,7 @@ def fuse(sem_scores, kw_scores, w_sem=2.0, w_kw=1.0, min_sem=0.30, depth=60,
         return []
 
     phrase_matches = phrase_scores or {}
+    coverage_matches = coverage_scores or {}
     if exact_only:
         candidates = {idx for idx in candidates if phrase_matches.get(idx, 0)}
         if not candidates:
@@ -122,6 +130,8 @@ def fuse(sem_scores, kw_scores, w_sem=2.0, w_kw=1.0, min_sem=0.30, depth=60,
 
     return sorted(
         candidates,
-        key=lambda idx: (phrase_matches.get(idx, 0), rank_score(idx), -idx),
+        key=lambda idx: (
+            phrase_matches.get(idx, 0), coverage_matches.get(idx, 0), rank_score(idx), -idx
+        ),
         reverse=True,
     )
