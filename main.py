@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from search_engine import SearchEngine
 
-W_SEM = 2.0  # weight of semantic search in the fusion (tuned with eval/evaluate.py)
+W_SEM = 2.0  # weight of semantic search in the fusion
 W_KW = 1.0   # weight of keyword search in the fusion
 SEARCH_DEPTH = 60
 OUTPUTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")

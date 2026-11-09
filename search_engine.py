@@ -5,7 +5,7 @@ import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
 
-from bm25 import BM25, full_phrase_length, fuse, phrase_suffix_length
+from bm25 import BM25, full_phrase_length, fuse, phrase_suffix_length, term_coverage
 
 # paraphrase-multilingual-MiniLM-L12-v2 with a vocabulary reduced to French
 # (Latin-script) tokens to keep the deployed API small.
@@ -24,8 +24,8 @@ class Embedder:
         self.tokenizer.enable_padding(pad_id=self.tokenizer.token_to_id("<pad>"), pad_token="<pad>")
         options = ort.SessionOptions()
         options.enable_cpu_mem_arena = False  # lower memory use between requests
-        # model.onnx is saved already optimized by tools/prune_vocab.py, so skipping the
-        # optimization pass makes loading ~20x cheaper. One thread is the fastest choice
+        # model.onnx is saved already optimized, so skipping the optimization pass
+        # makes loading ~20x cheaper. One thread is the fastest choice
         # on small hosting instances (0.1 vCPU).
         options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
         options.intra_op_num_threads = 1
@@ -86,9 +86,13 @@ class SearchEngine:
             phrase_scores = {
                 int(i): phrase_length(query, self.meta[int(i)]["text"]) for i in candidates
             }
+            coverage_scores = {
+                int(i): term_coverage(query, self.meta[int(i)]["text"]) for i in candidates
+            }
             order = fuse(sem, kw, w_sem=self.w_sem, w_kw=self.w_kw,
                          min_sem=MIN_SEM_SCORE, depth=self.depth,
-                         phrase_scores=phrase_scores, exact_only=exact_only)
+                         phrase_scores=phrase_scores, coverage_scores=coverage_scores,
+                         exact_only=exact_only)
 
         results = []
         for idx in order:
