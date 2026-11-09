@@ -1,4 +1,0 @@
-# Only needed to rebuild model/ with tools/prune_vocab.py
--r requirements.txt
-huggingface_hub==1.33.0
-onnx==1.23.2

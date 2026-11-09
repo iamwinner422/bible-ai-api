@@ -8,9 +8,9 @@ from tokenizers import Tokenizer
 from bm25 import BM25, full_phrase_length, fuse, phrase_suffix_length
 
 # paraphrase-multilingual-MiniLM-L12-v2 with a vocabulary reduced to French
-# (Latin-script) tokens, built by tools/prune_vocab.py to fit in ~512 MB of RAM.
+# (Latin-script) tokens to keep the deployed API small.
 MODEL = "paraphrase-multilingual-MiniLM-L12-v2 (French vocabulary)"
-MODEL_DIR = "model"
+MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model")
 MAX_TOKENS = 128
 MIN_SEM_SCORE = 0.30  # below this semantic score, a passage is not considered a match
 
